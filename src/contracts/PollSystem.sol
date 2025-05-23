@@ -78,5 +78,14 @@ contract PollSystem {
             results[i] = polls[_pollId].votes[i];
         }
         return results;
-}
+    }
+
+    function getPoll(uint256 _pollId) external view returns (
+        string memory question,
+        string[] memory options,
+        uint256 endTime
+    ) {
+        Poll storage poll = polls[_pollId];
+        return (poll.question, poll.options, poll.endTime);
+    }
 }

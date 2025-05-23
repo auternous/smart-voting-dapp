@@ -1,4 +1,4 @@
-POLL_SYSTEM_ABI = [
+POLL_SYSTEM_ABI =[
     {
       "inputs": [
         {
@@ -38,16 +38,16 @@ POLL_SYSTEM_ABI = [
       "type": "error"
     },
     {
-      "anonymous": false,
+      "anonymous": False,
       "inputs": [
         {
-          "indexed": true,
+          "indexed": True,
           "internalType": "uint256",
           "name": "pollId",
           "type": "uint256"
         },
         {
-          "indexed": false,
+          "indexed": False,
           "internalType": "string",
           "name": "question",
           "type": "string"
@@ -57,22 +57,22 @@ POLL_SYSTEM_ABI = [
       "type": "event"
     },
     {
-      "anonymous": false,
+      "anonymous": False,
       "inputs": [
         {
-          "indexed": true,
+          "indexed": True,
           "internalType": "uint256",
           "name": "pollId",
           "type": "uint256"
         },
         {
-          "indexed": false,
+          "indexed": False,
           "internalType": "address",
           "name": "voter",
           "type": "address"
         },
         {
-          "indexed": false,
+          "indexed": False,
           "internalType": "uint256",
           "name": "optionId",
           "type": "uint256"
@@ -125,6 +125,35 @@ POLL_SYSTEM_ABI = [
           "internalType": "uint256[]",
           "name": "",
           "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_pollId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getPoll",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "question",
+          "type": "string"
+        },
+        {
+          "internalType": "string[]",
+          "name": "options",
+          "type": "string[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "endTime",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -235,4 +264,4 @@ POLL_SYSTEM_ABI = [
       "stateMutability": "nonpayable",
       "type": "function"
     }
-  ]
+]
