@@ -8,7 +8,7 @@ contract PollSystem {
     using ECDSA for bytes32;
     
     IERC20 public pollToken;
-    address public admin;
+    address public relayer;
     uint256 public pollCreationFee = 100 ether;
 
     struct Poll {
@@ -25,9 +25,31 @@ contract PollSystem {
     event PollCreated(uint256 indexed pollId, string question);
     event Voted(uint256 indexed pollId, address voter, uint256 optionId);
 
-    constructor(address _token) {
+    constructor(address _token, address _relayer) {
         pollToken = IERC20(_token);
-        admin = msg.sender;
+        relayer = _relayer;
+    }
+
+    function voteWithSignature(
+        uint256 _pollId,
+        uint256 _optionId,
+        address _voter,
+        bytes memory _signature
+    ) external {
+        require(msg.sender == relayer, "Only relayer can call this");
+        
+        bytes32 messageHash = keccak256(abi.encodePacked(_pollId, _optionId, _voter));
+        address signer = ECDSA.recover(messageHash, _signature);
+        require(signer == _voter, "Invalid signature");
+
+        Poll storage poll = polls[_pollId];
+        require(!poll.voters[_voter], "Already voted");
+        require(_optionId < poll.options.length, "Invalid option");
+        require(block.timestamp <= poll.endTime, "Poll ended");
+
+        poll.votes[_optionId]++;
+        poll.voters[_voter] = true;
+        emit Voted(_pollId, _voter, _optionId);
     }
 
     function createPoll(
@@ -35,7 +57,8 @@ contract PollSystem {
         string[] memory _options,
         uint256 _duration
     ) external {
-        pollToken.transferFrom(msg.sender, admin, pollCreationFee);
+        require(msg.sender == relayer, "Only relayer can create polls");
+        pollToken.transferFrom(msg.sender, address(this), pollCreationFee);
         
         Poll storage newPoll = polls[pollCount];
         newPoll.question = _question;
@@ -46,24 +69,7 @@ contract PollSystem {
         pollCount++;
     }
 
-    function voteWithSignature(
-        uint256 _pollId,
-        uint256 _optionId,
-        bytes memory _signature
-    ) external {
-        bytes32 messageHash = keccak256(abi.encodePacked(_pollId, _optionId));
-        address voter = ECDSA.recover(messageHash, _signature);
-        
-        Poll storage poll = polls[_pollId];
-        require(!poll.voters[voter], "Already voted");
-        require(_optionId < poll.options.length, "Invalid option");
-        require(block.timestamp <= poll.endTime, "Poll ended");
-
-        poll.votes[_optionId]++;
-        poll.voters[voter] = true;
-        emit Voted(_pollId, voter, _optionId);
-    }
-
+    // Остальные функции остаются без изменений
     function getAllPolls() external view returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](pollCount);
         for (uint256 i = 0; i < pollCount; i++) {

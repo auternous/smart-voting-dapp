@@ -263,5 +263,55 @@ POLL_SYSTEM_ABI =[
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
-    }
+    },
+    {
+    "constant": False,
+    "inputs": [
+      { "name": "spender", "type": "address" },
+      { "name": "amount", "type": "uint256" }
+    ],
+    "name": "approve",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "type": "function",
+    "stateMutability": "nonpayable"
+  },
+  {
+    "constant": False,
+    "inputs": [
+      { "name": "from", "type": "address" },
+      { "name": "to", "type": "address" },
+      { "name": "amount", "type": "uint256" }
+    ],
+    "name": "transferFrom",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "type": "function",
+    "stateMutability": "nonpayable"
+  },
+  {
+    "constant": False,
+    "inputs": [
+      { "name": "recipient", "type": "address" },
+      { "name": "amount", "type": "uint256" }
+    ],
+    "name": "transfer",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "type": "function",
+    "stateMutability": "nonpayable"
+  },
+  {
+    "constant": True,
+    "inputs": [{ "name": "account", "type": "address" }],
+    "name": "balanceOf",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "type": "function",
+    "stateMutability": "view"
+  },
+  {
+    "constant": True,
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [{ "name": "", "type": "uint8" }],
+    "type": "function",
+    "stateMutability": "view"
+  }
 ]

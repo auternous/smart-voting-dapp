@@ -1,20 +1,17 @@
 async function main() {
   const [deployer] = await ethers.getSigners();
-  
-  // Деплой PollToken
+
   const PollToken = await ethers.getContractFactory("PollToken");
   const token = await PollToken.deploy();
-  console.log("PollToken deployed to:", await token.getAddress());
+  await token.deployed();
+  console.log("PollToken deployed to:", token.address);
 
-  // Деплой PollSystem
+  const someValue = 42; // <--- Определи нужное значение здесь
+
   const PollSystem = await ethers.getContractFactory("PollSystem");
-  const pollSystem = await PollSystem.deploy(await token.getAddress());
-  
-  console.log("PollSystem deployed to:", await pollSystem.getAddress());
-  console.log("Transaction hash:", pollSystem.deploymentTransaction().hash);
-}
+  const pollSystem = await PollSystem.deploy(token.address, someValue);
+  await pollSystem.deployed();
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  console.log("PollSystem deployed to:", pollSystem.address);
+  console.log("Transaction hash:", pollSystem.deployTransaction.hash);
+}
