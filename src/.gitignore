@@ -1,19 +1,27 @@
-node_modules
+# Node modules
+node_modules/
+
+# Hardhat cache and artifacts
+cache/
+artifacts/
+
+# Environment variables
 .env
 
-# Hardhat files
-/cache
-/artifacts
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# TypeChain files
-/typechain
-/typechain-types
+# Hardhat deploy plugin (если используешь)
+deployments/
 
-# solidity-coverage files
-/coverage
-/coverage.json
+# Optional: MacOS system files
+.DS_Store
 
-# Hardhat Ignition default folder for deployments against a local node
-ignition/deployments/chain-31337
+# Optional: VSCode settings
+.vscode/
 
-/backend/.venv
+# Python
+
+backend/.venv/
