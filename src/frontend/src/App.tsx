@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import HomePage from "./pages/Home";
 import CreatePage from "./pages/Create";
-import LeaderboardPage from "./pages/Leaderboard";
+import LeaderboardPage from "./components/Leaderboard";
 import InfoPage from "./pages/Info";
 import UserPanel from "./components/UserPanel"; // 👈 Новая панель пользователя
 

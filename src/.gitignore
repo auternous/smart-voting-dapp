@@ -25,3 +25,4 @@ deployments/
 # Python
 
 backend/.venv/
+backend/votes.bd

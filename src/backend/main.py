@@ -87,16 +87,25 @@ def get_leaderboard():
 @app.get("/balance/{address}")
 def get_balance(address: str):
     try:
+        if not Web3.is_address(address):
+            raise HTTPException(status_code=400, detail="Неверный адрес кошелька")
+
         checksum = Web3.to_checksum_address(address)
+
         balance = poll_token.functions.balanceOf(checksum).call()
+        symbol = poll_token.functions.symbol().call()
+        decimals = poll_token.functions.decimals().call()
+
         return {
             "address": checksum,
-            "balance": balance,
-            "symbol": poll_token.functions.symbol().call(),
-            "decimals": poll_token.functions.decimals().call()
+            "balance": str(balance),
+            "symbol": symbol,
+            "decimals": decimals
         }
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ Ошибка при получении баланса: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка получения баланса")
 
 
 @app.get("/polls")
@@ -166,52 +175,80 @@ def create_poll(req: CreatePoll):
 
 
 from fastapi import Body
+from eth_utils import from_wei
 
 @app.post("/relay-vote")
 def relay_vote(req: RelayVoteRequest = Body(...)):
     try:
-        # ✅ Явно валидируем hex подпись
+        # ✅ Подготовка и отладка
+        print(f"📨 Новый голос: poll={req.poll_id}, option={req.option_id}, voter={req.voter}")
+
+        # 🧷 Проверка подписи
         try:
             signature_bytes = bytes.fromhex(req.signature[2:] if req.signature.startswith("0x") else req.signature)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid hex signature")
+            raise HTTPException(status_code=400, detail="Invalid hex signature format")
 
-        # 🧮 Сборка сообщения
         message_hash = Web3.solidity_keccak(
             ["uint256", "uint256", "address"],
             [req.poll_id, req.option_id, Web3.to_checksum_address(req.voter)]
         )
         eth_signed = encode_defunct(message_hash)
 
-        # ✅ Проверка подписи
         try:
             recovered = w3.eth.account.recover_message(eth_signed, signature=signature_bytes)
-        except Exception as e:
+        except Exception:
             raise HTTPException(status_code=400, detail="Signature validation failed")
 
         if recovered.lower() != req.voter.lower():
-            raise HTTPException(status_code=400, detail="Signature does not match voter address")
+            raise HTTPException(status_code=400, detail="Signature does not match voter")
 
-        # 🌐 Отправка транзакции от релэера
+        print(f"🔐 Подпись валидна для {req.voter}")
+
+        # 📤 Build & send tx
         nonce = w3.eth.get_transaction_count(ADMIN)
+        tx_config = {
+            "from": ADMIN,
+            "nonce": nonce,
+            "gasPrice": w3.to_wei("20", "gwei")
+        }
+
         tx = poll_system.functions.voteWithSignature(
             req.poll_id,
             req.option_id,
             req.voter,
             signature_bytes
-        ).build_transaction({
-            "from": ADMIN,
-            "nonce": nonce,
-            "gasPrice": w3.to_wei("20", "gwei")
-        })
-        signed = w3.eth.account.sign_transaction(tx, PRIVATE_KEY)
-        tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+        ).build_transaction(tx_config)
 
-        # 🗂️ Сохраняем результат в БД
+        signed_tx = w3.eth.account.sign_transaction(tx, PRIVATE_KEY)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+
+        print(f"⛓ Транзакция отправлена: {tx_hash.hex()}")
+
+        # 🧾 Ожидание подтверждения
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+        tx_info = w3.eth.get_transaction(tx_hash)
+
+        gas_used = receipt["gasUsed"]
+        gas_price = tx_info["gasPrice"]
+        total_fee = gas_used * gas_price
+        tx_fee = gas_used * gas_price  # ← вот эту строку ты забыл
+
+        print(f"""
+            ✅ Транзакция подтверждена:
+            🔗 TxHash: {tx_hash.hex()}
+            📦 Gas Used: {gas_used}
+            💵 Gas Price: {from_wei(gas_price, 'gwei')} Gwei
+            💸 Total Fee: {from_wei(tx_fee, 'ether')} ETH
+            ⏰ Time: {datetime.utcnow()}
+        """)
+
+        # 🗳️ Обновление БД
         session = SessionLocal()
         user = session.get(User, req.voter)
+
         if not user:
-            user = User(address=req.voter)
+            user = User(address=req.voter, polls_created=0, votes_cast=0)
             session.add(user)
 
         user.votes_cast = (user.votes_cast or 0) + 1
@@ -222,15 +259,23 @@ def relay_vote(req: RelayVoteRequest = Body(...)):
             user_address=req.voter,
             tx_hash=tx_hash.hex()
         )
+
         session.add(vote)
         session.commit()
         session.close()
 
-        return {"tx_hash": tx_hash.hex()}
+        # ✅ Финальный ответ
+        return {
+            "tx_hash": tx_hash.hex(),
+            "gas_used": gas_used,
+            "gas_price_gwei": float(w3.from_wei(gas_price, 'gwei')),
+            "total_fee_eth": float(w3.from_wei(total_fee, 'ether')),
+            "status": "confirmed"
+        }
 
+    # 🎯 Обработка ошибок
     except HTTPException as he:
-        # Пропускаем HTTP ошибки напрямую
         raise he
     except Exception as e:
-        # Все остальные ошибки → 500
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ INTERNAL ERROR relay_vote: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
