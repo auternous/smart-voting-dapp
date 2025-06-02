@@ -5,6 +5,7 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 from models import SessionLocal, User, Poll, Vote
 import time
+from web3_setup import ADMIN
 
 from main import app, poll_token, poll_system, w3
 client = TestClient(app)
@@ -105,3 +106,12 @@ def test_create_user_manually():
     assert u.polls_created == 0
     assert u.votes_cast == 0
     session.close()
+
+def test_get_balance():
+    response = client.get(f"/balance/{ADMIN}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["address"].lower() == ADMIN.lower()
+    assert "balance" in data
+    assert isinstance(data["balance"], int)
+    assert data["symbol"] == "POLL"

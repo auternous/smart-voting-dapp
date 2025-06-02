@@ -9,9 +9,15 @@
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^8.0.1",
+    "delay-cli": "^2.0.0",
     "ethers": "^5.7.2",
     "hardhat": "^2.22.1",
-    "concurrently": "^8.0.1",
-    "delay-cli": "^2.0.0"
+    "postcss": "^8.5.4",
+    "tailwindcss": "^4.1.8"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6"
   }
 }

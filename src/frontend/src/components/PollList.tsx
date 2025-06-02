@@ -8,7 +8,8 @@ type Poll = {
   end_time: number;
 };
 
-const PollList: React.FC = () => {
+// ✅ Описываем пропы
+export default function PollList({ search = "" }: { search?: string }) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,22 +31,31 @@ const PollList: React.FC = () => {
     fetchPolls();
   }, []);
 
-  if (loading) return <p>Загрузка опросов...</p>;
-  if (error) return <p style={{ color: "red" }}>{error}</p>;
+  const filtered = polls.filter((poll) =>
+    poll.question.toLowerCase().includes(search.toLowerCase())
+  );
 
-  if (polls.length === 0) return <p>Нет активных опросов.</p>;
+  if (loading) return <p>⌛ Загрузка опросов...</p>;
+  if (error) return <p className="text-red-600">{error}</p>;
+
+  if (filtered.length === 0) return <p>🙁 Ни одного опроса не найдено.</p>;
 
   return (
-    <div>
-      {polls.map((poll) => (
-        <div key={poll.id} style={{ border: "1px solid #ccc", padding: "16px", marginBottom: "24px" }}>
-          <h3>🗳️ Вопрос: {poll.question}</h3>
-          <ul>
+    <div className="space-y-4">
+      {filtered.map((poll) => (
+        <div
+          key={poll.id}
+          className="border border-typewriter-border p-4 transition hover:bg-typewriter-border/25"
+        >
+          <h3 className="text-lg font-bold mb-2">🗳️ {poll.question}</h3>
+          <p className="text-sm mb-2">
+            Завершение: {new Date(poll.end_time * 1000).toLocaleString()}
+          </p>
+          <ul className="space-y-2">
             {poll.options.map((opt, index) => (
-              <li key={index} style={{ marginBottom: "8px" }}>
-                <strong>{opt}</strong>
-                <br />
+              <li key={index}>
                 <VoteButton pollId={poll.id} optionId={index} />
+                <span className="ml-2">{opt}</span>
               </li>
             ))}
           </ul>
@@ -53,6 +63,4 @@ const PollList: React.FC = () => {
       ))}
     </div>
   );
-};
-
-export default PollList;
+}
