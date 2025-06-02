@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from web3_setup import w3, poll_system, poll_token, ADMIN, PRIVATE_KEY
 from models import SessionLocal, User, Poll, Vote
 from schemas import CreatePoll, RelayVoteRequest
-
+from fastapi import APIRouter
+from sqlalchemy.orm import Session
+from fastapi import Depends
 from sqlalchemy.exc import SQLAlchemyError
 
 app = FastAPI()
@@ -23,15 +25,24 @@ app.add_middleware(
 def get_contract_poll(poll_id: int):
     try:
         question, options, end_time_raw = poll_system.functions.getPoll(poll_id).call()
-        end_time = datetime.fromtimestamp(end_time_raw, tz=timezone.utc)
+        end_time = int(end_time_raw)
+
+        # 🛡️ Защищённый вызов getVotes
+        try:
+            votes = poll_system.functions.getVotes(poll_id).call()
+        except Exception as e:
+            print(f"⚠️ Голоса не получены для poll #{poll_id}: {e}")
+            votes = None
+
         return {
             "id": poll_id,
             "question": question,
             "options": options,
-            "end_time": end_time
+            "end_time": end_time,
+            "votes": votes,  # может быть None, фронт обработает
         }
     except Exception as e:
-        print(f"❌ Error getting poll from contract: {e}")
+        print(f"❌ Ошибка при получении poll #{poll_id}: {e}")
         return None
 
 
@@ -42,6 +53,35 @@ def health_check():
         "block": w3.eth.block_number,
         "admin": ADMIN
     }
+
+
+
+@app.get("/leaderboard")
+def get_leaderboard():
+    session = SessionLocal()
+    try:
+        users = session.query(User).all()
+        result = []
+
+        for user in users:
+            try:
+                checksum = Web3.to_checksum_address(user.address)
+                balance_raw = poll_token.functions.balanceOf(checksum).call()
+                decimals = poll_token.functions.decimals().call()
+                balance = balance_raw // (10 ** decimals)
+
+                result.append({
+                    "address": checksum,
+                    "balance": balance
+                })
+            except Exception as e:
+                print(f"⚠️ Не удалось получить баланс для {user.address}: {e}")
+                continue
+
+        sorted_result = sorted(result, key=lambda x: x["balance"], reverse=True)
+        return sorted_result[:10]
+    finally:
+        session.close()
 
 
 @app.get("/balance/{address}")

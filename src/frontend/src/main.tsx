@@ -8,3 +8,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>
 );
+
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_BACKEND_API_URL: string;
+    readonly VITE_POLL_SYSTEM_ADDRESS: string;
+    readonly VITE_POLL_TOKEN_ADDRESS: string;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}

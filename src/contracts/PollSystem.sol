@@ -100,7 +100,8 @@ contract PollSystem {
         return (p.question, p.options, p.endTime);
     }
 
-    function getPollResults(uint256 pollId) external view returns (uint256[] memory results) {
+    // Результаты опроса
+    function getVotes(uint256 pollId) external view returns (uint256[] memory results) {
         Poll storage p = polls[pollId];
         uint256 length = p.options.length;
         results = new uint256[](length);
@@ -109,6 +110,7 @@ contract PollSystem {
         }
     }
 
+    // Получить все pollId
     function getAllPollIds() external view returns (uint256[] memory ids) {
         ids = new uint256[](pollCount);
         for (uint256 i = 0; i < pollCount; i++) {
@@ -116,6 +118,7 @@ contract PollSystem {
         }
     }
 
+    // Проверка, голосовал ли пользователь
     function hasVoted(uint256 pollId, address user) external view returns (bool) {
         return polls[pollId].voters[user];
     }

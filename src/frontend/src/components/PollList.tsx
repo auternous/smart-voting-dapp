@@ -5,10 +5,10 @@ type Poll = {
   id: number;
   question: string;
   options: string[];
-  end_time: number;
+  end_time: number;          // unix timestamp (в секундах)
+  votes?: number[];          // массив результатов (опционально)
 };
 
-// ✅ Описываем пропы
 export default function PollList({ search = "" }: { search?: string }) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,9 +19,12 @@ export default function PollList({ search = "" }: { search?: string }) {
       try {
         const res = await fetch(`${import.meta.env.VITE_BACKEND_API_URL}/polls`);
         const data = await res.json();
-        setPolls(data);
+
+        // 🔍 Фильтруем null/undefined
+        const validPolls = Array.isArray(data) ? data.filter((p) => p && p.id !== undefined) : [];
+        setPolls(validPolls);
       } catch (err) {
-        setError("Не удалось загрузить опросы");
+        setError("❌ Не удалось загрузить опросы");
         console.error(err);
       } finally {
         setLoading(false);
@@ -35,32 +38,56 @@ export default function PollList({ search = "" }: { search?: string }) {
     poll.question.toLowerCase().includes(search.toLowerCase())
   );
 
+  const sorted = [...filtered].sort((a, b) => b.id - a.id);
+
   if (loading) return <p>⌛ Загрузка опросов...</p>;
   if (error) return <p className="text-red-600">{error}</p>;
+  if (filtered.length === 0) return <p>🙁 Опросы не найдены</p>;
 
-  if (filtered.length === 0) return <p>🙁 Ни одного опроса не найдено.</p>;
 
   return (
     <div className="space-y-4">
-      {filtered.map((poll) => (
-        <div
-          key={poll.id}
-          className="border border-typewriter-border p-4 transition hover:bg-typewriter-border/25"
-        >
-          <h3 className="text-lg font-bold mb-2">🗳️ {poll.question}</h3>
-          <p className="text-sm mb-2">
-            Завершение: {new Date(poll.end_time * 1000).toLocaleString()}
-          </p>
-          <ul className="space-y-2">
-            {poll.options.map((opt, index) => (
-              <li key={index}>
-                <VoteButton pollId={poll.id} optionId={index} />
-                <span className="ml-2">{opt}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      {sorted.map((poll) => {
+        const isFinished = Date.now() / 1000 > poll.end_time;
+
+        return (
+          <div
+            key={poll.id}
+            className="border border-typewriter-border p-4 rounded hover:bg-gray-50"
+          >
+            <h3 className="text-lg font-bold mb-2">🗳️ {poll.question}</h3>
+
+            <p className="text-sm text-gray-600 mb-3">
+              ⏰ Завершение:{" "}
+              {poll.end_time
+                ? new Date(poll.end_time * 1000).toLocaleString()
+                : "неизвестно"}
+            </p>
+
+            {isFinished ? (
+              <div className="bg-gray-100 p-3 rounded text-sm">
+                <p className="font-semibold text-green-600 mb-1">📊 Результаты:</p>
+                <ul className="space-y-1">
+                  {poll.options.map((opt, idx) => (
+                    <li key={idx}>
+                      ✅ {opt}: <strong>{poll.votes?.[idx] ?? 0}</strong> голосов
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {poll.options.map((opt, idx) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <VoteButton pollId={poll.id} optionId={idx} />
+                    <span>{opt}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

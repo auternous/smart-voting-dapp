@@ -21,8 +21,6 @@ class User(Base):
     balance = Column(Integer, default=0)  # можно использовать как динамический кэш
     polls_created = Column(Integer, default=0)
     votes_cast = Column(Integer, default=0)
-    balance = Column(Integer, default=0)
-
     votes = relationship("Vote", back_populates="user")
     polls = relationship("Poll", back_populates="author")
 
