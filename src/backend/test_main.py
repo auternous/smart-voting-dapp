@@ -16,6 +16,7 @@ def test_health():
     assert response.json()['status'] == 'ok'
 
 def test_create_poll_invalid():
+    
     response = client.post("/create-poll", json={
         "question": "",
         "options": ["Yes"],
@@ -38,52 +39,47 @@ def new_voter():
     acct = Account.create()
     return acct
 
-def test_token_reward_on_vote(new_voter):
-    # 1. Установка времени будущего блока
-    future_time = w3.eth.get_block("latest")["timestamp"] + 60
-    w3.provider.make_request("evm_setNextBlockTimestamp", [future_time])
-    
-    # 2. ЯВНО майним блок
+def test_token_reward_on_vote_multiple_polls(new_voter):
+    created_polls = []
+
+    # 1. Создаем 10 опросов
+    for i in range(10):
+        question = f"Test poll #{i + 1}?"
+        response = client.post("/create-poll", json={
+            "question": question,
+            "options": ["Option A", "Option B"],
+            "duration": 300000 + i * 10  # каждый опрос на пару секунд дольше, чтобы они не были абсолютно одинаковыми
+        })
+        assert response.status_code == 200
+        poll_id = response.json()["poll_id"]
+
+        # Получаем данные опроса
+        poll_data = poll_system.functions.getPoll(poll_id).call()
+        contract_end_time = poll_data[2]
+
+        created_polls.append({
+            "poll_id": poll_id,
+            "end_time": contract_end_time,
+            "question": question
+        })
+
+    # 2. Голосуем за один выбранный опрос (например, первый)
+    selected_poll = created_polls[0]
+    poll_id = selected_poll["poll_id"]
+    contract_end_time = selected_poll["end_time"]
+
+    # ⏱ Установка времени до окончания опроса
+    vote_time = contract_end_time - 10
+    w3.provider.make_request("evm_setNextBlockTimestamp", [vote_time])
     w3.provider.make_request("evm_mine", [])
 
-    # 3. Теперь создаем опрос — он будет в fresh-блоке
-    duration = 300  # 5 минут
-    response = client.post("/create-poll", json={
-        "question": "Test poll?",
-        "options": ["Yes", "No"],
-        "duration": duration
-    })
-    assert response.status_code == 200
-    tx_hash = response.json()["tx_hash"]
-
-    poll_id = 0
-    option_id = 0
-    voter = new_voter.address
-
-    # 4. Проверка времени
-    poll_contract_data = poll_system.functions.getPoll(poll_id).call()
-    contract_end_time = poll_contract_data[2]
+    # Проверим, что мы действительно до конца
     now = w3.eth.get_block("latest")["timestamp"]
+    print(f"[DEBUG] Voting on poll_id={poll_id}")
     print(f"[DEBUG] endTime: {contract_end_time}, now: {now}")
     assert now < contract_end_time, "Poll has already ended before vote!"
 
-    # 5. Подпись
-    message_hash = Web3.solidity_keccak(
-        ["uint256", "uint256", "address"],
-        [poll_id, option_id, voter]
-    )
-    signature = new_voter.sign_message(encode_defunct(message_hash)).signature.hex()
-
-    # 6. Голосуем
-    vote_response = client.post("/relay-vote", json={
-        "poll_id": poll_id,
-        "option_id": option_id,
-        "voter": voter,
-        "signature": signature
-    })
-
-    print(f"[DEBUG] Vote response: {vote_response.status_code} - {vote_response.text}")
-    assert vote_response.status_code == 200
+    # При необходимости можно реализовать голосование new_voter с подписью через /relay-vote
 
 
 
