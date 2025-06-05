@@ -3,8 +3,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/access/Ownable.sol"; // ✅ добавлено
 
-contract PollSystem {
+contract PollSystem is Ownable { // ✅ наследуем Ownable
     using ECDSA for bytes32;
 
     IERC20 public pollToken;
@@ -27,10 +28,18 @@ contract PollSystem {
     event PollCreated(uint256 indexed pollId, string question);
     event Voted(uint256 indexed pollId, address indexed voter, uint256 optionId);
     event Rewarded(address indexed voter, uint256 amount);
+    event RelayerChanged(address oldRelayer, address newRelayer);
 
-    constructor(address _token, address _relayer) {
+    // ✅ вызываем Ownable() в конструкторе — обязательно!
+    constructor(address _token, address _relayer) Ownable() {
         pollToken = IERC20(_token);
         relayer = _relayer;
+    }
+
+    // ✅ управление релайером доступно только владельцу (через owner())
+    function setRelayer(address newRelayer) external onlyOwner {
+        emit RelayerChanged(relayer, newRelayer);
+        relayer = newRelayer;
     }
 
     function createPoll(
@@ -42,7 +51,6 @@ contract PollSystem {
         require(_options.length >= 2, "Need at least 2 options");
         require(_duration > 0, "Duration must be > 0");
 
-        // Пользователь платит токенами за создание опроса
         bool success = pollToken.transferFrom(msg.sender, address(this), pollCreationFee);
         require(success, "Poll creation fee failed");
 
@@ -69,19 +77,16 @@ contract PollSystem {
         require(optionId < poll.options.length, "Invalid option");
         require(block.timestamp <= poll.endTime, "Poll ended");
 
-        // Восстановление подписи
         bytes32 dataHash = keccak256(abi.encodePacked(pollId, optionId, voter));
         bytes32 ethSignedHash = dataHash.toEthSignedMessageHash();
         address recovered = ethSignedHash.recover(signature);
         require(recovered == voter, "Invalid signature");
 
-        // Зачисление голоса
         poll.votes[optionId]++;
         poll.voters[voter] = true;
 
         emit Voted(pollId, voter, optionId);
 
-        // 🎁 Выплата за голос
         bool success = pollToken.transfer(voter, voteReward);
         require(success, "Reward transfer failed");
         emit Rewarded(voter, voteReward);
@@ -100,7 +105,6 @@ contract PollSystem {
         return (p.question, p.options, p.endTime);
     }
 
-    // Результаты опроса
     function getVotes(uint256 pollId) external view returns (uint256[] memory results) {
         Poll storage p = polls[pollId];
         uint256 length = p.options.length;
@@ -110,7 +114,6 @@ contract PollSystem {
         }
     }
 
-    // Получить все pollId
     function getAllPollIds() external view returns (uint256[] memory ids) {
         ids = new uint256[](pollCount);
         for (uint256 i = 0; i < pollCount; i++) {
@@ -118,7 +121,6 @@ contract PollSystem {
         }
     }
 
-    // Проверка, голосовал ли пользователь
     function hasVoted(uint256 pollId, address user) external view returns (bool) {
         return polls[pollId].voters[user];
     }

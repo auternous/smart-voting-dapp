@@ -91,10 +91,12 @@ def get_balance(address: str):
             raise HTTPException(status_code=400, detail="Неверный адрес кошелька")
 
         checksum = Web3.to_checksum_address(address)
+        print("👉 Чекаем токен для адреса:", checksum)
 
         balance = poll_token.functions.balanceOf(checksum).call()
-        symbol = poll_token.functions.symbol().call()
         decimals = poll_token.functions.decimals().call()
+        symbol = poll_token.functions.symbol().call()
+        print("✅ Баланс:", balance, symbol, "Decimals:", decimals)
 
         return {
             "address": checksum,
@@ -104,7 +106,8 @@ def get_balance(address: str):
         }
 
     except Exception as e:
-        print(f"❌ Ошибка при получении баланса: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Ошибка получения баланса")
 
 
