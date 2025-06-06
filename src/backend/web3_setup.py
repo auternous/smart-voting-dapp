@@ -13,12 +13,12 @@ PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 SYSTEM_ADDRESS = os.getenv("CONTRACT_ADDRESS") or DEPLOY_INFO["pollSystemAddress"]
 TOKEN_ADDRESS = os.getenv("POLL_TOKEN_ADDRESS") or DEPLOY_INFO["pollTokenAddress"]
 
-# Web3
+
 w3 = Web3(Web3.HTTPProvider(RPC_URL))
 account = Account.from_key(PRIVATE_KEY)
 ADMIN = account.address
 
-# Контракты
+
 poll_system = w3.eth.contract(address=SYSTEM_ADDRESS, abi=POLL_SYSTEM_ABI)
 poll_token = w3.eth.contract(address=TOKEN_ADDRESS, abi=ERC20_ABI)
 

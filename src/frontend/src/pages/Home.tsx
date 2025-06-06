@@ -8,7 +8,6 @@ export default function Home() {
 
   return (
     <div>
-      {/* Кнопка ➕ перехода на create */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">🗳️ Лента опросов</h2>
         <button

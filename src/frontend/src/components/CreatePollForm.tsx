@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-// Импорт ABI
 import PollSystemABI from '../../../deployments/poll_system_abi.json';
 import PollTokenJson from '../../../deployments/poll_token_abi.json';
 
 const PollTokenABI: any[] = (PollTokenJson as { abi?: any[] }).abi ?? (PollTokenJson as any[]);
-// Адреса из .env
 const POLL_SYSTEM_ADDRESS = import.meta.env.VITE_POLL_SYSTEM_ADDRESS!;
 const POLL_TOKEN_ADDRESS = import.meta.env.VITE_POLL_TOKEN_ADDRESS!;
 const POLL_CREATION_FEE = ethers.utils.parseEther("100"); // 100 POLL
@@ -29,7 +27,6 @@ export default function CreatePollFormMetaMask() {
   setCurrentUser(address);
 };
 
-  // Проверяем владельца контракта при загрузке
   useEffect(() => {
     checkContractOwner();
   }, []);
@@ -50,7 +47,6 @@ export default function CreatePollFormMetaMask() {
       const newAddress = accounts[0];
       setCurrentUser(newAddress);
 
-      // Можно также обновить баланс
       try {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const pollToken = new ethers.Contract(POLL_TOKEN_ADDRESS, PollTokenABI, provider);
@@ -62,10 +58,8 @@ export default function CreatePollFormMetaMask() {
     }
   };
 
-  // Подписка на событие
   window.ethereum.on('accountsChanged', handleAccountsChanged);
 
-  // Очистка подписки при удалении компонента
   return () => {
     window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
   };
@@ -189,7 +183,6 @@ export default function CreatePollFormMetaMask() {
     <form onSubmit={handleSubmit} className="space-y-4 border p-6 rounded-md max-w-xl mx-auto bg-white text-black">
       <h2 className="text-xl font-bold">📋 Новый опрос (через MetaMask)</h2>
 
-      {/* Панель администратора */}
       <div className="bg-gray-50 p-3 rounded-md mb-4">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-medium">Информация о контракте</h3>
@@ -226,7 +219,6 @@ export default function CreatePollFormMetaMask() {
         )}
       </div>
 
-      {/* Форма создания опроса */}
       <div>
         <label className="block mb-1">📝 Вопрос:</label>
         <input

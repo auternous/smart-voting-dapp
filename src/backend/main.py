@@ -6,10 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from web3_setup import w3, poll_system, poll_token, ADMIN, PRIVATE_KEY
 from models import SessionLocal, User, Poll, Vote
 from schemas import CreatePoll, RelayVoteRequest
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from sqlalchemy.exc import SQLAlchemyError
+from eth_utils import from_wei
 
 app = FastAPI()
 
@@ -21,13 +22,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Получаем данные опроса из контракта
 def get_contract_poll(poll_id: int):
     try:
         question, options, end_time_raw = poll_system.functions.getPoll(poll_id).call()
         end_time = int(end_time_raw)
 
-        # 🛡️ Защищённый вызов getVotes
         try:
             votes = poll_system.functions.getVotes(poll_id).call()
         except Exception as e:
@@ -39,7 +38,7 @@ def get_contract_poll(poll_id: int):
             "question": question,
             "options": options,
             "end_time": end_time,
-            "votes": votes,  # может быть None, фронт обработает
+            "votes": votes, 
         }
     except Exception as e:
         print(f"❌ Ошибка при получении poll #{poll_id}: {e}")
@@ -177,16 +176,13 @@ def create_poll(req: CreatePoll):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-from fastapi import Body
-from eth_utils import from_wei
+
 
 @app.post("/relay-vote")
 def relay_vote(req: RelayVoteRequest = Body(...)):
     try:
-        # ✅ Подготовка и отладка
         print(f"📨 Новый голос: poll={req.poll_id}, option={req.option_id}, voter={req.voter}")
 
-        # 🧷 Проверка подписи
         try:
             signature_bytes = bytes.fromhex(req.signature[2:] if req.signature.startswith("0x") else req.signature)
         except ValueError:
@@ -208,7 +204,6 @@ def relay_vote(req: RelayVoteRequest = Body(...)):
 
         print(f"🔐 Подпись валидна для {req.voter}")
 
-        # 📤 Build & send tx
         nonce = w3.eth.get_transaction_count(ADMIN)
         tx_config = {
             "from": ADMIN,
@@ -228,14 +223,13 @@ def relay_vote(req: RelayVoteRequest = Body(...)):
 
         print(f"⛓ Транзакция отправлена: {tx_hash.hex()}")
 
-        # 🧾 Ожидание подтверждения
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
         tx_info = w3.eth.get_transaction(tx_hash)
 
         gas_used = receipt["gasUsed"]
         gas_price = tx_info["gasPrice"]
         total_fee = gas_used * gas_price
-        tx_fee = gas_used * gas_price  # ← вот эту строку ты забыл
+        tx_fee = gas_used * gas_price  
 
         print(f"""
             ✅ Транзакция подтверждена:
@@ -246,7 +240,6 @@ def relay_vote(req: RelayVoteRequest = Body(...)):
             ⏰ Time: {datetime.utcnow()}
         """)
 
-        # 🗳️ Обновление БД
         session = SessionLocal()
         user = session.get(User, req.voter)
 
@@ -267,7 +260,6 @@ def relay_vote(req: RelayVoteRequest = Body(...)):
         session.commit()
         session.close()
 
-        # ✅ Финальный ответ
         return {
             "tx_hash": tx_hash.hex(),
             "gas_used": gas_used,
@@ -276,7 +268,6 @@ def relay_vote(req: RelayVoteRequest = Body(...)):
             "status": "confirmed"
         }
 
-    # 🎯 Обработка ошибок
     except HTTPException as he:
         raise he
     except Exception as e:

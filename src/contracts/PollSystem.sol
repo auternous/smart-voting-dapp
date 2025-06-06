@@ -3,16 +3,16 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/access/Ownable.sol"; // ✅ добавлено
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract PollSystem is Ownable { // ✅ наследуем Ownable
+contract PollSystem is Ownable { 
     using ECDSA for bytes32;
 
     IERC20 public pollToken;
     address public relayer;
 
-    uint256 public pollCreationFee = 100 ether; // За создание опроса
-    uint256 public voteReward = 10 ether;       // Награда за голос
+    uint256 public pollCreationFee = 100 ether; 
+    uint256 public voteReward = 10 ether; 
 
     struct Poll {
         string question;
@@ -30,13 +30,11 @@ contract PollSystem is Ownable { // ✅ наследуем Ownable
     event Rewarded(address indexed voter, uint256 amount);
     event RelayerChanged(address oldRelayer, address newRelayer);
 
-    // ✅ вызываем Ownable() в конструкторе — обязательно!
     constructor(address _token, address _relayer) Ownable() {
         pollToken = IERC20(_token);
         relayer = _relayer;
     }
 
-    // ✅ управление релайером доступно только владельцу (через owner())
     function setRelayer(address newRelayer) external onlyOwner {
         emit RelayerChanged(relayer, newRelayer);
         relayer = newRelayer;

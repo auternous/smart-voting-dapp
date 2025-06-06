@@ -13,18 +13,17 @@ from datetime import datetime, timezone
 
 Base = declarative_base()
 
-# 👤 Пользователь (user = wallet)
+#(user = wallet)
 class User(Base):
     __tablename__ = "users"
 
     address = Column(String(42), primary_key=True)
-    balance = Column(Integer, default=0)  # можно использовать как динамический кэш
+    balance = Column(Integer, default=0) 
     polls_created = Column(Integer, default=0)
     votes_cast = Column(Integer, default=0)
     votes = relationship("Vote", back_populates="user")
     polls = relationship("Poll", back_populates="author")
 
-# 📋 Опрос
 class Poll(Base):
     __tablename__ = "polls"
 
@@ -38,7 +37,6 @@ class Poll(Base):
     author = relationship("User", back_populates="polls")
     votes = relationship("Vote", back_populates="poll")
 
-# 🗳 Голос
 class Vote(Base):
     __tablename__ = "votes"
 
@@ -52,7 +50,6 @@ class Vote(Base):
     user = relationship("User", back_populates="votes")
     poll = relationship("Poll", back_populates="votes")
 
-# 🎯 DB init
 engine = create_engine("sqlite:///votes.db")
 Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(bind=engine)

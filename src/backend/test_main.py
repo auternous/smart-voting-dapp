@@ -42,18 +42,16 @@ def new_voter():
 def test_token_reward_on_vote_multiple_polls(new_voter):
     created_polls = []
 
-    # 1. Создаем 10 опросов
     for i in range(10):
         question = f"Test poll #{i + 1}?"
         response = client.post("/create-poll", json={
             "question": question,
             "options": ["Option A", "Option B"],
-            "duration": 300000 + i * 10  # каждый опрос на пару секунд дольше, чтобы они не были абсолютно одинаковыми
+            "duration": 300000 + i * 10  
         })
         assert response.status_code == 200
         poll_id = response.json()["poll_id"]
 
-        # Получаем данные опроса
         poll_data = poll_system.functions.getPoll(poll_id).call()
         contract_end_time = poll_data[2]
 
@@ -63,40 +61,31 @@ def test_token_reward_on_vote_multiple_polls(new_voter):
             "question": question
         })
 
-    # 2. Голосуем за один выбранный опрос (например, первый)
     selected_poll = created_polls[0]
     poll_id = selected_poll["poll_id"]
     contract_end_time = selected_poll["end_time"]
 
-    # ⏱ Установка времени до окончания опроса
     vote_time = contract_end_time - 10
     w3.provider.make_request("evm_setNextBlockTimestamp", [vote_time])
     w3.provider.make_request("evm_mine", [])
 
-    # Проверим, что мы действительно до конца
     now = w3.eth.get_block("latest")["timestamp"]
     print(f"[DEBUG] Voting on poll_id={poll_id}")
     print(f"[DEBUG] endTime: {contract_end_time}, now: {now}")
     assert now < contract_end_time, "Poll has already ended before vote!"
-
-    # При необходимости можно реализовать голосование new_voter с подписью через /relay-vote
-
 
 
 def test_create_user_manually():
     session = SessionLocal()
     test_wallet = "0xAbcdef123456789000000000000000000000dEaD"
 
-    # Удаляем, если был
     session.query(User).filter_by(address=test_wallet).delete()
     session.commit()
 
-    # Добавляем нового пользователя
     user = User(address=test_wallet)
     session.add(user)
     session.commit()
 
-    # Проверяем из базы
     u = session.query(User).filter_by(address=test_wallet).first()
     assert u is not None
     assert u.polls_created == 0

@@ -18,7 +18,6 @@ export default function PollList({ search = "" }: { search?: string }) {
   const [votedPolls, setVotedPolls] = useState<Set<number>>(new Set());
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
 
-  // Получаем текущий адрес через MetaMask
   useEffect(() => {
     const fetchAddress = async () => {
       if (window.ethereum) {
@@ -28,7 +27,7 @@ export default function PollList({ search = "" }: { search?: string }) {
 
         window.ethereum.on("accountsChanged", (accounts: string[]) => {
           setCurrentAddress(accounts[0]);
-          window.dispatchEvent(new Event("vote-recorded")); // обновим индикаторы голосования
+          window.dispatchEvent(new Event("vote-recorded")); 
         });
       }
     };
