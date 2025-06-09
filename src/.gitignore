@@ -26,3 +26,5 @@ deployments/
 
 backend/.venv/
 backend/votes.bd
+
+../.DS_Store
