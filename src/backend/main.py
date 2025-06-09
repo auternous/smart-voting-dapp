@@ -162,7 +162,7 @@ def create_poll(req: CreatePoll):
         db_poll = Poll(
             question=poll_data['question'],
             options=poll_data['options'],
-            end_time=poll_data['end_time'],
+            end_time=datetime.fromtimestamp(poll_data['end_time'], tz=timezone.utc),
             creator_address=ADMIN,
             created_at=datetime.now(timezone.utc)
         )
